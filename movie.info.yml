@@ -1,0 +1,10 @@
+name: 'Movie'
+type: module
+description: 'Custom entity module for movies.'
+package: 'Custom'
+core_version_requirement: ^10
+dependencies:
+  - drupal:field
+  - rest:rest
+  - views:views
+  - serialization:serialization

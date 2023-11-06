@@ -1,0 +1,9 @@
+movie_form:
+  js:
+    dist/js/movie_form.js: {}
+  css:
+    theme:
+      dist/css/movie_form.css: {}
+  dependencies:
+    - core/drupal
+    - core/once

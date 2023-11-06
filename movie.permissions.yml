@@ -1,0 +1,11 @@
+administer movie:
+  title: 'Administer movies'
+  restrict access: true
+view movie:
+  title: 'View movie'
+edit movie:
+  title: 'Edit movie'
+delete movie:
+  title: 'Delete movie'
+create movie:
+  title: 'Create movie'

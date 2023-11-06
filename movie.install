@@ -1,0 +1,28 @@
+<?php
+
+/**
+ * @file
+ *   Install, update and uninstall functions for the movie module.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function movie_install() {
+  // Create the Genre vocabulary.
+  $vocabulary = \Drupal::entityTypeManager()->getStorage('taxonomy_vocabulary')->create([
+    'name' => 'Genre',
+    'vid' => 'genre',
+  ]);
+  $vocabulary->save();
+
+  $terms = ['Comedy', "Drama", "Action"];
+
+  foreach ($terms as $term) {
+    $term = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->create([
+      'name' => $term,
+      'vid' => 'genre',
+    ]);
+    $term->save();
+  }
+}

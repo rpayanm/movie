@@ -1,0 +1,117 @@
+<?php declare(strict_types = 1);
+
+/**
+ * @file
+ * Provides a movie entity type.
+ */
+
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Render\Element;
+use Drupal\user\UserInterface;
+
+/**
+ * Implements hook_theme().
+ */
+function movie_theme(): array {
+  return [
+    'movie' => ['render element' => 'elements'],
+  ];
+}
+
+/**
+ * Prepares variables for movie templates.
+ *
+ * Default template: movie.html.twig.
+ *
+ * @param array $variables
+ *   An associative array containing:
+ *   - elements: An associative array containing the movie information and any
+ *     fields attached to the entity.
+ *   - attributes: HTML attributes for the containing element.
+ */
+function template_preprocess_movie(array &$variables): void {
+  $variables['view_mode'] = $variables['elements']['#view_mode'];
+  foreach (Element::children($variables['elements']) as $key) {
+    $variables['content'][$key] = $variables['elements'][$key];
+  }
+}
+
+/**
+ * Implements hook_user_cancel().
+ */
+function movie_user_cancel($edit, UserInterface $account, $method): void {
+  switch ($method) {
+    case 'user_cancel_block_unpublish':
+      // Unpublish movies.
+      $storage = \Drupal::entityTypeManager()->getStorage('movie');
+      $movie_ids = $storage->getQuery()
+        ->condition('uid', $account->id())
+        ->condition('status', 1)
+        ->accessCheck(FALSE)
+        ->execute();
+      foreach ($storage->loadMultiple($movie_ids) as $movie) {
+        $movie->set('status', FALSE)->save();
+      }
+      break;
+
+    case 'user_cancel_reassign':
+      // Anonymize movies.
+      $storage = \Drupal::entityTypeManager()->getStorage('movie');
+      $movie_ids = $storage->getQuery()
+        ->condition('uid', $account->id())
+        ->accessCheck(FALSE)
+        ->execute();
+      foreach ($storage->loadMultiple($movie_ids) as $movie) {
+        $movie->setOwnerId(0)->save();
+      }
+      break;
+  }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_predelete() for user entities.
+ */
+function movie_user_predelete(UserInterface $account): void {
+  // Delete movies that belong to this account.
+  $storage = \Drupal::entityTypeManager()->getStorage('movie');
+  $movie_ids = $storage->getQuery()
+    ->condition('uid', $account->id())
+    ->accessCheck(FALSE)
+    ->execute();
+  $storage->delete(
+    $storage->loadMultiple($movie_ids)
+  );
+  // Delete old revisions.
+  $movie_ids = $storage->getQuery()
+    ->allRevisions()
+    ->condition('uid', $account->id())
+    ->accessCheck(FALSE)
+    ->execute();
+  foreach (array_keys($movie_ids) as $revision_id) {
+    $storage->deleteRevision($revision_id);
+  }
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function movie_form_alter(array &$form, FormStateInterface $form_state, $form_id): void {
+  if ($form_id === 'movie_edit_form' || $form_id === 'movie_add_form') {
+    $form['#validate'][] = 'movie_movie_form_validate';
+    $form['#attached']['library'][] = 'movie/movie_form';
+  }
+}
+
+/**
+ * Validate that release_date field cannot be in the future.
+ */
+function movie_movie_form_validate(array &$form, FormStateInterface $form_state): void {
+  $release_date = $form_state->getValue('release_date');
+  if (isset($release_date[0]["value"])) {
+    /** @var \Drupal\Core\Datetime\DrupalDateTime $release_date */
+    $release_date = $release_date[0]["value"];
+    if ($release_date->format('Y-m-d') > date('Y-m-d')) {
+      $form_state->setErrorByName('release_date', t('Release date cannot be in the future.'));
+    }
+  }
+}
